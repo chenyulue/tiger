@@ -1,5 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE Strict #-}
+{-# LANGUAGE TypeFamilies #-}
 module Ch01.SLP where
 
 import Data.Functor ( void )
@@ -160,7 +161,75 @@ interpExp (EseqExp stm exp) tb1 = do
 -}
 
 -- Exercises 1.1
-type Key = String
-data Tree = Leaf | Node Tree Key Tree deriving (Show, Eq)
+data Tree k = Leaf 
+            | Node (Tree k) k (Tree k) 
+            deriving (Show, Eq)
+
+class IsTree a where
+    type Index a :: *
+    empty :: a
+    insert :: Index a -> a -> a
+    search :: Index a -> a -> Maybe (Index a)
+    member :: Index a -> a -> Bool 
 
 
+instance Ord k => IsTree (Tree k) where
+    type Index (Tree k) = k
+    empty = Leaf
+    insert k Leaf = Node Leaf k Leaf
+    insert k (Node l key r)
+      | k < key = Node (insert k l) key r
+      | k > key = Node l key (insert k r)
+      | otherwise = Node l k r
+    member k Leaf = False 
+    member k (Node l key r)
+      | k == key = True 
+      | k < key = member k l
+      | otherwise = member k r
+    search k Leaf = Nothing
+    search k (Node l key r)
+      | k == key = Just key
+      | k < key = search k l 
+      | otherwise = search k r
+
+{- c. Demostrate the behavior on the following two sequences of insertions:
+(a) t s p i p f b s t
+(b) a b c d e f g h i
+These two insertions both create a highly biased tree, which is same as a linked list.
+So the search takes up to O(n) time.
+-}
+
+-- Implement a balanced trees. In this exercise, I choose the Red-Black Tree.
+data Color = R | B deriving (Show, Eq)
+data RBTree k = E
+              | T Color (RBTree k) k (RBTree k)
+              deriving (Show, Eq)
+
+instance Ord k => IsTree (RBTree k) where
+    type Index (RBTree k) = k
+    empty = E
+    member k E = False 
+    member k (T _ l key r)
+      | k == key = True 
+      | k < key = member k l
+      | otherwise = member k r 
+    insert k tr = 
+          let ins E = T R E k E
+              ins s@(T color l key r)
+                  | k < key = balance color (ins l) key r 
+                  | k > key = balance color l key (ins r)
+                  | otherwise = s
+              T _ l key r = ins tr
+           in T B l key r
+    search k E = Nothing
+    search k (T _ l key r)
+      | k == key = Just key 
+      | k < key = search k l 
+      | otherwise = search k r
+
+balance :: Color -> RBTree k -> k -> RBTree k -> RBTree k 
+balance B (T R (T R a x b) y c) z d = T R (T B a x b) y (T B c z d)
+balance B (T R a x (T R b y c)) z d = T R (T B a x b) y (T B c z d)
+balance B a x (T R (T R b y c) z d) = T R (T B a x b) y (T B c z d)
+balance B a x (T R b y (T R c z d)) = T R (T B a x b) y (T B c z d)
+balance color a x b = T color a x b
