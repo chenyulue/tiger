@@ -3,6 +3,7 @@
 module Ch01.SLP where
 
 import Data.Functor ( void )
+import Control.Monad.Except
 
 -- Program 1.5: Tree representation of a straignt-line program
 type ID = String
@@ -52,6 +53,54 @@ maxArgs = \case
 -- 2
 
 -- interp interprets a program in this language.
+interp :: Stm -> IO ()
+interp stm = do 
+      result <- runExceptT $ interpStm stm []
+      case result of
+            Left errInfo -> putStrLn errInfo
+            Right _ -> return ()
+
+type Env = [(ID, Int)]
+
+interpExp :: Exp -> Env -> ExceptT String IO (Int, Env)
+interpExp (IDExp id) env = 
+      case lookup id env of
+            Just result -> return (result, env) 
+            Nothing -> throwError $ "Error: " ++ id ++ " is not defined."
+            
+interpExp (NumExp num) env = return (num, env)
+
+interpExp (OpExp exp1 op exp2) env1 = do
+      (result1, env2) <- interpExp exp1 env1
+      (result2, env3) <- interpExp exp2 env2
+      case op of
+            Plus -> return (result1 + result2, env3)
+            Minus -> return (result1 - result2, env3)
+            Times -> return (result1 * result2, env3)
+            Div -> return (div result1 result2, env3)
+
+interpExp (EseqExp stm exp) env1 = do
+      env2 <- interpStm stm env1
+      interpExp exp env2
+
+interpStm :: Stm -> Env -> ExceptT String IO Env 
+interpStm (CompoundStd stm1 stm2) env1 = interpStm stm1 env1 >>= interpStm stm2
+
+interpStm (AssignStm id exp) env1 = do
+      (result, env2) <- interpExp exp env1
+      return $ (id, result) : env2
+
+interpStm (PrintStm []) env = liftIO (putChar '\n') >> return env
+
+interpStm (PrintStm (exp:exps)) env1 = do
+      (result, env2) <- interpExp exp env1
+      liftIO (putStr (show result) >> putChar ' ')
+      interpStm (PrintStm exps) env2
+
+-- >>> interp prog
+-- ()
+
+{- Preliminary implemention
 interp :: Stm -> IO ()
 interp stm = do
       result <- interpStm stm []
@@ -108,6 +157,10 @@ interpExp (EseqExp stm exp) tb1 = do
       case table of
             Left errInfo -> return . Left $ errInfo
             Right tb2 -> interpExp exp tb2
+-}
 
--- >>> interp prog
--- ()
+-- Exercises 1.1
+type Key = String
+data Tree = Leaf | Node Tree Key Tree deriving (Show, Eq)
+
+

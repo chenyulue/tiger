@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 45d7e2e0a30178a6bfd23024860a63affa9b94d87943e73a419ad1c5ece8a78a
+-- hash: d11006952bd8c5b01a98c9a52f7f26dea71f83574b7febbd1bfe915bab737007
 
 name:           tiger
 version:        0.1.0.0
@@ -35,6 +35,7 @@ library
       src
   build-depends:
       base >=4.7 && <5
+    , mtl
   default-language: Haskell2010
 
 executable tiger-exe
@@ -46,6 +47,7 @@ executable tiger-exe
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
+    , mtl
     , tiger
   default-language: Haskell2010
 
@@ -59,5 +61,6 @@ test-suite tiger-test
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
+    , mtl
     , tiger
   default-language: Haskell2010
